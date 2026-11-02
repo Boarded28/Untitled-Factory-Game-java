@@ -1,0 +1,83 @@
+plugins {
+  id 'java'
+  id 'application'
+}
+
+version = "0.1.0-SNAPSHOT"
+
+application {
+    mainClass = 'com.scrapitalism.ScrapitalismGame'
+}
+
+// lwjgl stuff
+project.ext.lwjglVersion = "3.4.3"
+project.ext.jomlVersion = "1.10.9"
+project.ext.lwjglAwtVersion = "0.2.3"
+
+def osName = System.getProperty("os.name").toLowerCase()
+def osArch = System.getProperty("os.arch")
+
+if (osName.contains("linux")) {
+    project.ext.lwjglNatives = "natives-linux"
+    if (osArch.startsWith("arm") || osArch.startsWith("aarch64")) {
+        project.ext.lwjglNatives += osArch.contains("64") || osArch.startsWith("armv8") ? "-arm64" : "-arm32"
+    } else if (osArch.startsWith("ppc")) {
+        project.ext.lwjglNatives += "-ppc64le"
+    } else if (osArch.startsWith("riscv")) {
+        project.ext.lwjglNatives += "-riscv64"
+    }
+} else if (osName.contains("windows")) {
+    project.ext.lwjglNatives = osArch.contains("64") ? "natives-windows" : "natives-windows-x86"
+} else if (osName.contains("mac")) {
+    project.ext.lwjglNatives = osArch.startsWith("aarch64") ? "natives-macos-arm64" : "natives-macos"
+} else {
+    throw new GradleException("Unsupported OS: $osName")
+}
+
+
+jar {
+    manifest {
+        attributes (
+            'Main-Class': 'com.scrapitalism.ScrapitalismGame',
+            'Implementation-Version': "$version"
+        )
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // tests
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // lwjgl/opengl
+    implementation platform("org.lwjgl:lwjgl-bom:$lwjglVersion")
+
+    implementation "org.lwjgl:lwjgl"
+    implementation "org.lwjgl:lwjgl-glfw"
+    implementation "org.lwjgl:lwjgl-openal"
+    implementation "org.lwjgl:lwjgl-opengl"
+    implementation "org.lwjgl:lwjgl-stb"
+
+    runtimeOnly "org.lwjgl:lwjgl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-glfw::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-openal::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-opengl::$lwjglNatives"
+    runtimeOnly "org.lwjgl:lwjgl-stb::$lwjglNatives"
+
+    implementation "org.joml:joml:${jomlVersion}"
+    implementation ("org.lwjglx:lwjgl3-awt:${lwjglAwtVersion}") {
+        transitive = false
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
+
+    testLogging {
+        events "passed"
+    }
+}
